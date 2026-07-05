@@ -38,6 +38,53 @@ const els = {
 const STORAGE_KEY = "it_trainer_settings_v1";
 const SESSION_KEY = "it_trainer_session_v1";
 
+/*
+ * Fest hinterlegte Standardwerte (bewusste Entscheidung von Lutz, 05.07.2026)
+ * ----------------------------------------------------------------------------
+ * Damit ein versehentliches Loeschen von "Cookies und Websitedaten" beim
+ * Cache-Leeren nicht jedes Mal eine erneute manuelle Eingabe von Webhook-URL
+ * und Token erfordert, liegen beide Werte hier als Fallback im Quellcode.
+ * Hinweis zur Tragweite: Dieses Repository ist auf GitHub OEFFENTLICH
+ * (Public), der Quellcode inkl. dieser Werte ist also fuer jeden einsehbar,
+ * der den Repository-Namen kennt - nicht nur "auf dem Handy". Lutz hat das
+ * Risiko bewusst akzeptiert (nur Zugriff auf diesen einen Lern-Agenten,
+ * Budget-Deckel 30 Euro/Monat, kein Zugriff auf andere Systeme). Bei Bedarf
+ * jederzeit ueber "Token rotieren" in den Agent-Einstellungen ungueltig
+ * machen und hier ersetzen.
+ */
+const DEFAULT_WEBHOOK_URL = "https://italienisch-trainer-proxy.buchhaltung-131.workers.dev";
+const DEFAULT_WEBHOOK_TOKEN = "8oJU9GI7Ya0sxhnHXmBpD-C2EqGh9l9b0PcgzJAbNTU";
+
+/*
+ * Bootstrap ueber URL-Parameter
+ * -----------------------------
+ * Falls der lokale Speicher (localStorage) geleert wurde - z.B. weil Lutz
+ * bewusst "Cookies und Websitedaten" beim Cache-Leeren mitloescht - reicht
+ * ein einmal gespeichertes Lesezeichen/Homescreen-Icon mit angehaengten
+ * Parametern, um Webhook-URL und Token automatisch neu zu setzen, ganz ohne
+ * erneute manuelle Eingabe:
+ *
+ *   index.html?webhook=<url-encodierte-webhook-url>&token=<token>
+ *
+ * Sicherheitshinweis: Der Token steht dann sichtbar in der Adresse. Das ist
+ * fuer ein rein persoenliches Lesezeichen/Homescreen-Icon unkritisch, aber
+ * dieser Link darf niemals geteilt oder oeffentlich gepostet werden.
+ */
+function applyBootstrapParamsIfPresent() {
+  const params = new URLSearchParams(window.location.search);
+  const webhookFromUrl = params.get("webhook");
+  const tokenFromUrl = params.get("token");
+
+  if (!webhookFromUrl && !tokenFromUrl) return;
+
+  const current = loadSettings();
+  const merged = Object.assign({}, current, {
+    webhookUrl: webhookFromUrl || current.webhookUrl || "",
+    webhookToken: tokenFromUrl || current.webhookToken || "",
+  });
+  saveSettings(merged);
+}
+
 let recognition = null;
 let wakeLock = null;
 let sessionActive = false;
@@ -47,12 +94,21 @@ let selectedVoice = null;
 // ---------- Einstellungen laden/speichern ----------
 
 function loadSettings() {
+  let stored = {};
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    stored = raw ? JSON.parse(raw) : {};
   } catch (e) {
-    return {};
+    stored = {};
   }
+  // Fallback auf fest hinterlegte Standardwerte, falls der lokale Speicher
+  // leer ist (z.B. nach Cache-Loeschen) - siehe Hinweis bei den Konstanten.
+  return {
+    webhookUrl: stored.webhookUrl || DEFAULT_WEBHOOK_URL,
+    webhookToken: stored.webhookToken || DEFAULT_WEBHOOK_TOKEN,
+    context: stored.context,
+    voiceName: stored.voiceName,
+  };
 }
 
 function saveSettings(settings) {
@@ -351,6 +407,7 @@ els.btnPause.addEventListener("click", () => {
 
 // ---------- Init ----------
 
+applyBootstrapParamsIfPresent();
 initSettingsUI();
 
 if ("serviceWorker" in navigator) {
