@@ -1,0 +1,187 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #0f1720;
+  color: #f4f6f8;
+  font-family: -apple-system, Roboto, "Segoe UI", sans-serif;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+header {
+  text-align: center;
+  padding: 8px 0 16px 0;
+}
+
+header h1 {
+  font-size: 20px;
+  margin: 0;
+  font-weight: 600;
+}
+
+#status-badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.status-idle { background: #2a3441; color: #9fb0c3; }
+.status-listening { background: #1f6d3a; color: #d7ffe4; }
+.status-speaking { background: #1f4d8f; color: #dceaff; }
+.status-error { background: #7a1f1f; color: #ffdede; }
+.status-paused { background: #7a5a1f; color: #fff2d0; }
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+#prompt-card {
+  width: 100%;
+  max-width: 480px;
+  background: #16202b;
+  border-radius: 20px;
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+
+#prompt-lang {
+  font-size: 13px;
+  color: #8fa2b8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+#prompt-text {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.3;
+  min-height: 40px;
+}
+
+#last-transcript {
+  margin-top: 18px;
+  font-size: 15px;
+  color: #9fb0c3;
+  min-height: 20px;
+}
+
+#controls {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+button {
+  border: none;
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#btn-start {
+  background: #2f8f4e;
+  color: white;
+}
+
+#btn-pause {
+  background: #3a4a5c;
+  color: #f4f6f8;
+}
+
+#btn-mic {
+  background: #1f4d8f;
+  color: white;
+}
+
+#btn-mic.listening {
+  background: #c0392b;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+}
+.row > * {
+  flex: 1;
+}
+
+footer {
+  padding-top: 16px;
+}
+
+#settings-toggle {
+  background: none;
+  color: #6f84a0;
+  text-decoration: underline;
+  font-size: 13px;
+  padding: 6px;
+}
+
+#settings-panel {
+  display: none;
+  background: #16202b;
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+#settings-panel.open {
+  display: block;
+}
+
+#settings-panel label {
+  display: block;
+  font-size: 13px;
+  color: #9fb0c3;
+  margin-top: 10px;
+}
+
+#settings-panel input, #settings-panel select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #2a3441;
+  background: #0f1720;
+  color: #f4f6f8;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+#settings-panel button {
+  margin-top: 14px;
+  background: #2f8f4e;
+  color: white;
+  width: 100%;
+}
+
+#wakelock-hint {
+  font-size: 12px;
+  color: #8fa2b8;
+  text-align: center;
+  margin-top: 6px;
+}

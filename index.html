@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Italienisch Trainer Hands-free</title>
+<link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#0f1720" />
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>🇮🇹 Hands-free Trainer</h1>
+    <span id="status-badge" class="status-idle">Bereit</span>
+  </header>
+
+  <main>
+    <div id="prompt-card">
+      <div id="prompt-lang">Warte auf Start</div>
+      <div id="prompt-text">—</div>
+      <div id="last-transcript"></div>
+    </div>
+
+    <div id="controls">
+      <button id="btn-start">Session starten</button>
+      <div class="row">
+        <button id="btn-mic">🎤 Sprechen</button>
+        <button id="btn-pause">Pause</button>
+      </div>
+    </div>
+    <div id="wakelock-hint"></div>
+  </main>
+
+  <footer>
+    <button id="settings-toggle">Einstellungen (Webhook-URL / Token)</button>
+    <div id="settings-panel">
+      <label for="webhook-url">Webhook-URL des Agenten</label>
+      <input id="webhook-url" type="text" placeholder="https://.../webhooks/..." />
+
+      <label for="webhook-token">Bearer-Token</label>
+      <input id="webhook-token" type="text" placeholder="Token aus Agent-Einstellungen" />
+
+      <label for="voice-select">Stimme (Italienisch, falls verfügbar)</label>
+      <select id="voice-select"></select>
+
+      <label for="context-select">Kontext</label>
+      <select id="context-select">
+        <option value="auto">Unterwegs (allgemein)</option>
+        <option value="bett">Bett</option>
+        <option value="training">Training</option>
+      </select>
+
+      <button id="btn-save-settings">Speichern</button>
+    </div>
+  </footer>
+</div>
+
+<script src="./app.js"></script>
+</body>
+</html>
