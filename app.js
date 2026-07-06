@@ -282,28 +282,86 @@ function renderPrompt(promptText, lang) {
 // ---------- Webhook-Kommunikation ----------
 
 /*
- * Antwort-Entpackung (Fix vom 06.07.2026)
- * ----------------------------------------
+ * Antwort-Entpackung (Fix vom 06.07.2026, erweitert am 06.07.2026)
+ * -------------------------------------------------------------------
  * Die 9brains-Webhook-Huelle liefert ein Umschlag-Objekt der Form
- *   { "runId": "...", "status": "succeeded", "output": "<JSON-String>" }
+ *   { "runId": "...", "status": "succeeded", "output": "<Text>" }
  * Die eigentliche, fuer die App relevante Antwort (speak_text,
- * next_prompt_text, should_listen, ...) steckt als JSON-TEXT im Feld
- * "output", nicht direkt auf der obersten Ebene. Ohne dieses Entpacken
- * sind data.speak_text / data.next_prompt_text / data.should_listen immer
+ * next_prompt_text, should_listen, ...) steckt als Text im Feld "output",
+ * nicht direkt auf der obersten Ebene. Ohne dieses Entpacken sind
+ * data.speak_text / data.next_prompt_text / data.should_listen immer
  * undefined - die App zeigt dann keine Aufgabe an, liest nichts vor und
  * hoert nicht zu, obwohl der Agent serverseitig korrekt geantwortet hat.
- * Diese Funktion entpackt das "output"-Feld, falls vorhanden, und faellt
- * andernfalls auf die Rohantwort zurueck (Robustheit, falls sich das
- * Huellenformat spaeter aendert und schon flach ankommt).
+ *
+ * Der Agent SOLL laut AGENTS.md nur reines JSON ohne Codeblock und ohne
+ * Zusatztext in "output" liefern. In der Praxis kommt es trotzdem vor, dass
+ * das JSON in einen Markdown-Codeblock (```json ... ```) verpackt ist
+ * und/oder zusaetzlicher erklaerender Fliesztext davor oder danach steht
+ * (z.B. "Kurze Zusammenfassung: ..."). Ein einfaches JSON.parse(output)
+ * schlaegt dann fehl. Deshalb entpackt extractJsonObject() robust in
+ * mehreren Stufen, bevor komplett aufgegeben wird:
+ *   1. Direktes JSON.parse() auf den getrimmten String.
+ *   2. Falls das scheitert: Inhalt eines ```json ... ``` bzw. ``` ... ```
+ *      Codeblocks extrahieren und darauf erneut JSON.parse() versuchen.
+ *   3. Falls das auch scheitert: die erste vollstaendige, geschweift-
+ *      geklammerte JSON-Struktur im Text suchen (Klammer-Zaehlung, damit
+ *      verschachtelte { } korrekt erkannt werden) und darauf JSON.parse()
+ *      versuchen.
+ *   4. Erst wenn alle drei Stufen scheitern, wird auf die Rohantwort
+ *      zurueckgefallen (Fallback, damit die App nie hart abstuerzt).
  */
+function extractJsonObject(text) {
+  if (typeof text !== "string") return null;
+
+  const trimmed = text.trim();
+
+  // Stufe 1: direktes Parsen.
+  try {
+    return JSON.parse(trimmed);
+  } catch (e) {
+    // weiter zu Stufe 2
+  }
+
+  // Stufe 2: Inhalt eines Markdown-Codeblocks extrahieren (```json ... ``` oder ``` ... ```).
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (codeBlockMatch) {
+    try {
+      return JSON.parse(codeBlockMatch[1].trim());
+    } catch (e) {
+      // weiter zu Stufe 3, mit dem Codeblock-Inhalt als Suchtext
+    }
+  }
+
+  // Stufe 3: Erste vollstaendige { ... }-Struktur im Text suchen (Klammer-
+  // Zaehlung fuer korrektes Erkennen verschachtelter Objekte), unabhaengig
+  // davon ob ein Codeblock gefunden wurde oder nicht.
+  const searchText = codeBlockMatch ? codeBlockMatch[1] : trimmed;
+  const startIdx = searchText.indexOf("{");
+  if (startIdx !== -1) {
+    let depth = 0;
+    for (let i = startIdx; i < searchText.length; i++) {
+      if (searchText[i] === "{") depth++;
+      if (searchText[i] === "}") depth--;
+      if (depth === 0) {
+        const candidate = searchText.slice(startIdx, i + 1);
+        try {
+          return JSON.parse(candidate);
+        } catch (e) {
+          break; // Kandidat war kein gueltiges JSON, kein weiterer Versuch.
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 function unwrapAgentPayload(raw) {
   if (raw && typeof raw.output === "string") {
-    try {
-      return JSON.parse(raw.output);
-    } catch (e) {
-      console.warn("Konnte 'output'-Feld nicht als JSON parsen, nutze Rohantwort:", e);
-      return raw;
-    }
+    const parsed = extractJsonObject(raw.output);
+    if (parsed !== null) return parsed;
+    console.warn("Konnte 'output'-Feld auch nach Codeblock-/Freitext-Bereinigung nicht als JSON parsen, nutze Rohantwort:", raw.output);
+    return raw;
   }
   if (raw && typeof raw.output === "object" && raw.output !== null) {
     // Falls die Huelle das Innenleben schon als Objekt statt als String liefert.
