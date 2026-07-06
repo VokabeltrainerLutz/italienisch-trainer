@@ -281,6 +281,37 @@ function renderPrompt(promptText, lang) {
 
 // ---------- Webhook-Kommunikation ----------
 
+/*
+ * Antwort-Entpackung (Fix vom 06.07.2026)
+ * ----------------------------------------
+ * Die 9brains-Webhook-Huelle liefert ein Umschlag-Objekt der Form
+ *   { "runId": "...", "status": "succeeded", "output": "<JSON-String>" }
+ * Die eigentliche, fuer die App relevante Antwort (speak_text,
+ * next_prompt_text, should_listen, ...) steckt als JSON-TEXT im Feld
+ * "output", nicht direkt auf der obersten Ebene. Ohne dieses Entpacken
+ * sind data.speak_text / data.next_prompt_text / data.should_listen immer
+ * undefined - die App zeigt dann keine Aufgabe an, liest nichts vor und
+ * hoert nicht zu, obwohl der Agent serverseitig korrekt geantwortet hat.
+ * Diese Funktion entpackt das "output"-Feld, falls vorhanden, und faellt
+ * andernfalls auf die Rohantwort zurueck (Robustheit, falls sich das
+ * Huellenformat spaeter aendert und schon flach ankommt).
+ */
+function unwrapAgentPayload(raw) {
+  if (raw && typeof raw.output === "string") {
+    try {
+      return JSON.parse(raw.output);
+    } catch (e) {
+      console.warn("Konnte 'output'-Feld nicht als JSON parsen, nutze Rohantwort:", e);
+      return raw;
+    }
+  }
+  if (raw && typeof raw.output === "object" && raw.output !== null) {
+    // Falls die Huelle das Innenleben schon als Objekt statt als String liefert.
+    return raw.output;
+  }
+  return raw;
+}
+
 async function callAgent(payload) {
   const s = loadSettings();
   if (!s.webhookUrl || !s.webhookToken) {
@@ -300,7 +331,8 @@ async function callAgent(payload) {
     throw new Error("Webhook-Fehler: HTTP " + response.status);
   }
 
-  return response.json();
+  const raw = await response.json();
+  return unwrapAgentPayload(raw);
 }
 
 function buildBasePayload(extra) {
